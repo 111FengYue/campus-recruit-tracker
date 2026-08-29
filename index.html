@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校招记录</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --border: #e6e8ec;
+    --text: #1f2329;
+    --muted: #8a919c;
+    --accent: #3b6ef5;
+    --accent-soft: #eef3ff;
+    --danger: #e5484d;
+    --danger-soft: #fdecec;
+    --hover: #eef0f3;
+    --panel-bg: #fafbfc;
+    --divider: #f0f1f3;
+    --badge-bg: #eef0f3;
+    --faint: #b3b9c2;
+    --mask: rgba(15, 23, 42, .4);
+    --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
+    --radius: 12px;
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --bg: #0f1216;
+    --card: #1a1e24;
+    --border: #2a3038;
+    --text: #e8eaed;
+    --muted: #98a0ab;
+    --accent: #6b9bff;
+    --accent-soft: #223151;
+    --danger: #ff6b6f;
+    --danger-soft: #3a2225;
+    --hover: #242a32;
+    --panel-bg: #15191f;
+    --divider: #252b33;
+    --badge-bg: #262d36;
+    --faint: #6b7380;
+    --mask: rgba(0, 0, 0, .65);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 1px 3px rgba(0, 0, 0, .4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* 顶部 */
+  header { margin-bottom: 24px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header h1 { font-size: 24px; font-weight: 650; letter-spacing: .5px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .ghost-btn {
+    height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); color: var(--text); font-size: 12px; cursor: pointer;
+    transition: background .12s, border .12s;
+  }
+  .ghost-btn:hover { background: var(--hover); }
+  header .sub {
+    margin-top: 6px; font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .stat { font-size: 12px; color: var(--muted); }
+  .stat b { color: var(--text); font-weight: 600; }
+  .dot-sep { color: var(--muted); }
+
+  /* 表单 */
+  .form-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 28px;
+  }
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 10px; align-items: end;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .field input {
+    height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; color: var(--text); background: var(--card); outline: none; transition: border .15s, box-shadow .15s;
+  }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn {
+    height: 38px; padding: 0 18px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600; background: var(--accent); color: #fff;
+    transition: background .15s, transform .05s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent); filter: brightness(.92); }
+  .btn:active { transform: translateY(1px); }
+
+  /* 分组 */
+  .group { margin-bottom: 22px; }
+  .group-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .group-title { font-size: 15px; font-weight: 650; }
+  .group-count {
+    font-size: 12px; color: var(--muted); background: var(--badge-bg); border-radius: 20px;
+    padding: 2px 10px; font-weight: 500;
+  }
+
+  /* 卡片 */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); margin-bottom: 8px; overflow: hidden; transition: border .15s;
+  }
+  .card-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+
+  .reject-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; flex-shrink: 0;
+    font-size: 12px; color: var(--muted);
+  }
+  .reject-toggle input { width: 16px; height: 16px; accent-color: var(--danger); cursor: pointer; }
+
+  .card-main { flex: 1; min-width: 0; cursor: pointer; }
+  .card-title {
+    font-size: 15px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .company { color: var(--text); }
+  .pos-sep { color: var(--muted); font-weight: 400; }
+  .position { color: var(--muted); font-weight: 500; }
+  .card-meta { margin-top: 3px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .tag {
+    font-size: 11px; padding: 1px 8px; border-radius: 20px; background: var(--accent-soft);
+    color: var(--accent); font-weight: 600;
+  }
+  .hint-learn { font-size: 11px; color: var(--faint); }
+
+  .card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .progress-select {
+    height: 30px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text); background: var(--card); padding: 0 6px; outline: none; cursor: pointer; max-width: 110px;
+  }
+  .progress-select:focus { border-color: var(--accent); }
+  .icon-btn {
+    width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer;
+    background: transparent; color: var(--muted); font-size: 16px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; transition: background .12s, color .12s;
+  }
+  .icon-btn:hover { background: var(--hover); color: var(--text); }
+  .icon-btn.del:hover { background: var(--danger-soft); color: var(--danger); }
+
+  /* 落选划掉 */
+  .card.rejected { opacity: .62; }
+  .card.rejected .card-title,
+  .card.rejected .card-meta,
+  .card.rejected .company,
+  .card.rejected .position { text-decoration: line-through; }
+
+  /* 知识点面板 */
+  .knowledge-panel { border-top: 1px dashed var(--border); padding: 12px 14px 14px; background: var(--panel-bg); }
+  .knowledge-panel[hidden] { display: none; }
+  .kp-head { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+  .kp-list { list-style: none; margin-bottom: 12px; }
+  .kp-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--divider); }
+  .kp-item:last-child { border-bottom: none; }
+  .kp-item input[type=checkbox] { width: 15px; height: 15px; accent-color: #16a34a; cursor: pointer; flex-shrink: 0; }
+  .kp-text { flex: 1; font-size: 14px; }
+  .kp-item.done .kp-text { text-decoration: line-through; color: var(--muted); }
+  .kp-del { border: none; background: transparent; color: var(--faint); cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .kp-del:hover { color: var(--danger); }
+  .kp-add { display: flex; gap: 8px; }
+  .kp-add input {
+    flex: 1; height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; color: var(--text); background: var(--card); outline: none;
+  }
+  .kp-add input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn-sm { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-sm:hover { filter: brightness(.92); }
+  .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 60px 0; }
+
+  /* 编辑弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center;
+    z-index: 50; padding: 20px;
+  }
+  .modal-mask[hidden] { display: none; }
+  .modal {
+    background: var(--card); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 380px;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, .2);
+  }
+  .modal h3 { font-size: 16px; margin-bottom: 16px; }
+  .modal .field { margin-bottom: 12px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .btn-ghost { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; }
+  .btn-ghost:hover { background: var(--hover); }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid .btn { grid-column: span 2; }
+    .card-actions { gap: 4px; }
+    .progress-select { max-width: 88px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="header-top">
+      <h1>校招记录</h1>
+      <div class="header-actions">
+        <button class="ghost-btn" id="btn-export" title="导出为 JSON 文件">导出</button>
+        <button class="ghost-btn" id="btn-import" title="从 JSON 文件导入">导入</button>
+        <button class="icon-btn" id="btn-theme" title="切换深浅色模式">🌙</button>
+      </div>
+    </div>
+    <div class="sub">
+      <span class="stat">共 <b id="stat-total">0</b> 个岗位</span>
+      <span class="dot-sep">·</span>
+      <span class="stat">进行中 <b id="stat-active">0</b></span>
+      <span class="dot-sep">·</span>
+      <span class="stat">已划掉 <b id="stat-rejected">0</b></span>
+    </div>
+  </header>
+
+  <div class="form-card">
+    <form id="add-form" class="form-grid" autocomplete="off">
+      <div class="field">
+        <label for="f-company">公司名称</label>
+        <input id="f-company" placeholder="如：字节跳动" required>
+      </div>
+      <div class="field">
+        <label for="f-position">岗位名称</label>
+        <input id="f-position" placeholder="如：前端开发工程师" required>
+      </div>
+      <div class="field">
+        <label for="f-progress">当前进展</label>
+        <input id="f-progress" list="progress-options" placeholder="如：面试中" value="已投递">
+        <datalist id="progress-options"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-date">日期</label>
+        <input id="f-date" type="date">
+      </div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+  </div>
+
+  <main id="list"></main>
+  <div class="empty" id="empty" hidden>还没有记录，先在上方添加第一个岗位吧。</div>
+</div>
+
+<!-- 导入文件 -->
+<input type="file" id="file-import" accept="application/json,.json" hidden>
+
+<!-- 编辑弹窗 -->
+<div class="modal-mask" id="modal" hidden>
+  <div class="modal">
+    <h3>编辑岗位</h3>
+    <div class="field">
+      <label for="e-company">公司名称</label>
+      <input id="e-company">
+    </div>
+    <div class="field">
+      <label for="e-position">岗位名称</label>
+      <input id="e-position">
+    </div>
+    <div class="field">
+      <label for="e-date">日期</label>
+      <input id="e-date" type="date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modal-cancel">取消</button>
+      <button class="btn" id="modal-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'campus_recruit_records_v1';
+  const THEME_KEY = 'campus_recruit_theme';
+  const DEFAULT_PROGRESS = ['已投递', '简历筛选', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '已签约'];
+  const PROGRESS_PRIORITY = {
+    '已投递': 0, '投递': 0,
+    '简历筛选': 1, '筛选中': 1, '简历筛选中': 1,
+    '笔试': 2, '笔试中': 2,
+    '一面': 3, '面试': 3, '面试中': 3,
+    '二面': 4, '三面': 5, 'HR面': 6, 'HR面试': 6,
+    'Offer': 7, 'offer': 7, '已通过': 7,
+    '已签约': 8
+  };
+
+  let records = load();
+  let editingId = null;      // 正在编辑的岗位 id
+  let expandedId = null;     // 展开知识点面板的岗位 id
+
+  const $ = (sel) => document.querySelector(sel);
+  const listEl = $('#list');
+  const emptyEl = $('#empty');
+
+  // ---------- 数据 ----------
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
+  }
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function todayStr() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+  function fmtDate(s) {
+    if (!s) return '';
+    const [y, m, d] = s.split('-');
+    const cur = new Date().getFullYear();
+    return (Number(y) === cur ? '' : y + '年') + Number(m) + '月' + Number(d) + '日';
+  }
+  function sig(r) {
+    return [r.company || '', r.position || '', r.date || '', r.progress || ''].join('||');
+  }
+
+  // ---------- 深浅色 ----------
+  function currentTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch (e) {}
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    $('#btn-theme').textContent = t === 'dark' ? '☀️' : '🌙';
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+  }
+
+  // ---------- 导出 / 导入 ----------
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '校招记录-' + todayStr() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const arr = JSON.parse(reader.result);
+        if (!Array.isArray(arr)) throw new Error('not array');
+        let added = 0, skipped = 0;
+        const seen = new Set(records.map(sig));
+        arr.forEach(item => {
+          if (!item || typeof item !== 'object') return;
+          const company = (item.company || '').toString().trim();
+          const position = (item.position || '').toString().trim();
+          if (!company && !position) return;
+          const s = sig({ company, position, date: item.date, progress: item.progress });
+          if (seen.has(s)) { skipped++; return; }
+          seen.add(s);
+          records.push({
+            id: uid(),
+            date: item.date || todayStr(),
+            company,
+            position,
+            progress: item.progress || '已投递',
+            rejected: !!item.rejected,
+            knowledge: Array.isArray(item.knowledge) ? item.knowledge.map(String) : [],
+            knowledgeDone: Array.isArray(item.knowledgeDone) ? item.knowledgeDone : undefined
+          });
+          added++;
+        });
+        save();
+        render();
+        alert('导入完成：新增 ' + added + ' 条' + (skipped ? '，跳过重复 ' + skipped + ' 条' : '') + '。');
+      } catch (e) {
+        alert('导入失败：文件格式不正确。');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- 分组 ----------
+  function groupPriority(name) {
+    return name in PROGRESS_PRIORITY ? PROGRESS_PRIORITY[name] : 999;
+  }
+  function groupedRecords() {
+    const map = new Map();
+    records.forEach(r => {
+      const key = r.progress || '未设置';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    const groups = [...map.entries()].map(([name, items]) => ({ name, items }));
+    groups.sort((a, b) => {
+      const pa = groupPriority(a.name), pb = groupPriority(b.name);
+      if (pa !== pb) return pa - pb;
+      return a.name.localeCompare(b.name, 'zh');
+    });
+    groups.forEach(g => g.items.sort((a, b) => (a.rejected ? 1 : 0) - (b.rejected ? 1 : 0)));
+    return groups;
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    const groups = groupedRecords();
+    const allProgress = collectProgressOptions();
+
+    updateDatalist(allProgress);
+    updateStats();
+
+    if (records.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+
+    listEl.innerHTML = '';
+    groups.forEach(g => {
+      const section = document.createElement('section');
+      section.className = 'group';
+
+      const head = document.createElement('div');
+      head.className = 'group-head';
+      head.innerHTML =
+        '<span class="group-title"></span>' +
+        '<span class="group-count"></span>';
+      head.querySelector('.group-title').textContent = g.name;
+      head.querySelector('.group-count').textContent = g.items.length + ' 个';
+      section.appendChild(head);
+
+      g.items.forEach(r => section.appendChild(buildCard(r, allProgress)));
+      listEl.appendChild(section);
+    });
+  }
+
+  function buildCard(r, allProgress) {
+    const card = document.createElement('div');
+    card.className = 'card' + (r.rejected ? ' rejected' : '');
+    card.dataset.id = r.id;
+
+    const row = document.createElement('div');
+    row.className = 'card-row';
+
+    const rejectLabel = document.createElement('label');
+    rejectLabel.className = 'reject-toggle';
+    rejectLabel.title = '勾选后划掉（落选）';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!r.rejected;
+    cb.addEventListener('change', () => {
+      r.rejected = cb.checked;
+      save();
+      render();
+    });
+    rejectLabel.appendChild(cb);
+    rejectLabel.appendChild(document.createTextNode('落选'));
+
+    const main = document.createElement('div');
+    main.className = 'card-main';
+    main.innerHTML =
+      '<div class="card-title"><span class="company"></span>' +
+      '<span class="pos-sep">·</span><span class="position"></span></div>' +
+      '<div class="card-meta"><span class="card-date"></span>' +
+      '<span class="tag"></span><span class="hint-learn"></span></div>';
+    main.querySelector('.company').textContent = r.company;
+    main.querySelector('.position').textContent = r.position;
+    main.querySelector('.card-date').textContent = fmtDate(r.date);
+    main.querySelector('.tag').textContent = r.progress || '未设置';
+    main.querySelector('.hint-learn').textContent =
+      (r.knowledge || []).length ? '知识点 ' + r.knowledge.length + ' 个' : '点击填写知识点';
+    main.addEventListener('click', () => {
+      expandedId = expandedId === r.id ? null : r.id;
+      render();
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    const sel = document.createElement('select');
+    sel.className = 'progress-select';
+    sel.title = '修改进展';
+    allProgress.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
+    sel.value = r.progress || '未设置';
+    sel.addEventListener('change', () => {
+      r.progress = sel.value;
+      save();
+      render();
+    });
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'icon-btn';
+    editBtn.title = '编辑公司 / 岗位 / 日期';
+    editBtn.textContent = '✎';
+    editBtn.addEventListener('click', () => openEdit(r));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn del';
+    delBtn.title = '删除';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      if (confirm('确定删除「' + r.company + ' · ' + r.position + '」吗？')) {
+        records = records.filter(x => x.id !== r.id);
+        save();
+        render();
+      }
+    });
+
+    actions.appendChild(sel);
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(rejectLabel);
+    row.appendChild(main);
+    row.appendChild(actions);
+    card.appendChild(row);
+
+    if (expandedId === r.id) {
+      card.appendChild(buildKnowledgePanel(r));
+    }
+
+    return card;
+  }
+
+  function buildKnowledgePanel(r) {
+    const kp = (r.knowledge = r.knowledge || []);
+    const panel = document.createElement('div');
+    panel.className = 'knowledge-panel';
+
+    const head = document.createElement('div');
+    head.className = 'kp-head';
+    head.textContent = '需要学习的知识点';
+    panel.appendChild(head);
+
+    const list = document.createElement('ul');
+    list.className = 'kp-list';
+    if (kp.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'kp-item';
+      li.style.color = 'var(--faint)';
+      li.style.fontSize = '13px';
+      li.textContent = '暂无知识点';
+      list.appendChild(li);
+    } else {
+      kp.forEach((text, i) => {
+        const li = document.createElement('li');
+        li.className = 'kp-item' + (r.knowledgeDone && r.knowledgeDone[i] ? ' done' : '');
+        const c = document.createElement('input');
+        c.type = 'checkbox';
+        c.checked = !!(r.knowledgeDone && r.knowledgeDone[i]);
+        c.addEventListener('change', () => {
+          r.knowledgeDone = r.knowledgeDone || [];
+          r.knowledgeDone[i] = c.checked;
+          save();
+          render();
+        });
+        const span = document.createElement('span');
+        span.className = 'kp-text';
+        span.textContent = text;
+        const del = document.createElement('button');
+        del.className = 'kp-del';
+        del.title = '删除';
+        del.textContent = '×';
+        del.addEventListener('click', () => {
+          kp.splice(i, 1);
+          if (r.knowledgeDone) r.knowledgeDone.splice(i, 1);
+          save();
+          render();
+        });
+        li.appendChild(c);
+        li.appendChild(span);
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+    panel.appendChild(list);
+
+    const addWrap = document.createElement('div');
+    addWrap.className = 'kp-add';
+    const input = document.createElement('input');
+    input.placeholder = '输入知识点，如：React Hooks';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-sm';
+    addBtn.textContent = '添加';
+    const doAdd = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      kp.push(v);
+      if (r.knowledgeDone) r.knowledgeDone.push(false);
+      save();
+      render();
+    };
+    addBtn.addEventListener('click', doAdd);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+    addWrap.appendChild(input);
+    addWrap.appendChild(addBtn);
+    panel.appendChild(addWrap);
+
+    return panel;
+  }
+
+  // ---------- 进展选项 ----------
+  function collectProgressOptions() {
+    const set = new Set(DEFAULT_PROGRESS);
+    records.forEach(r => { if (r.progress) set.add(r.progress); });
+    return [...set];
+  }
+  function updateDatalist(opts) {
+    const dl = $('#progress-options');
+    dl.innerHTML = '';
+    opts.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p;
+      dl.appendChild(o);
+    });
+  }
+  function updateStats() {
+    $('#stat-total').textContent = records.length;
+    $('#stat-rejected').textContent = records.filter(r => r.rejected).length;
+    $('#stat-active').textContent = records.filter(r => !r.rejected).length;
+  }
+
+  // ---------- 添加 ----------
+  const addForm = $('#add-form');
+  addForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const company = $('#f-company').value.trim();
+    const position = $('#f-position').value.trim();
+    const progress = $('#f-progress').value.trim() || '已投递';
+    const date = $('#f-date').value || todayStr();
+    if (!company || !position) return;
+    records.push({ id: uid(), date, company, position, progress, rejected: false, knowledge: [] });
+    save();
+    $('#f-company').value = '';
+    $('#f-position').value = '';
+    $('#f-progress').value = progress;
+    $('#f-company').focus();
+    render();
+  });
+
+  // ---------- 编辑弹窗 ----------
+  const modal = $('#modal');
+  function openEdit(r) {
+    editingId = r.id;
+    $('#e-company').value = r.company;
+    $('#e-position').value = r.position;
+    $('#e-date').value = r.date || todayStr();
+    modal.hidden = false;
+    $('#e-company').focus();
+  }
+  $('#modal-cancel').addEventListener('click', () => { modal.hidden = true; editingId = null; });
+  $('#modal-save').addEventListener('click', () => {
+    const r = records.find(x => x.id === editingId);
+    if (r) {
+      r.company = $('#e-company').value.trim() || r.company;
+      r.position = $('#e-position').value.trim() || r.position;
+      r.date = $('#e-date').value || r.date;
+      save();
+      render();
+    }
+    modal.hidden = true;
+    editingId = null;
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) { modal.hidden = true; editingId = null; }
+  });
+
+  // ---------- 事件绑定 ----------
+  $('#btn-export').addEventListener('click', exportJSON);
+  $('#btn-import').addEventListener('click', () => $('#file-import').click());
+  $('#file-import').addEventListener('change', () => {
+    const file = $('#file-import').files[0];
+    if (file) importJSON(file);
+    $('#file-import').value = '';
+  });
+  $('#btn-theme').addEventListener('click', () => {
+    applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  // ---------- 初始化 ----------
+  $('#f-date').value = todayStr();
+  applyTheme(currentTheme());
+  render();
+})();
+</script>
+</body>
+</html>
