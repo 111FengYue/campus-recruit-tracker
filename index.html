@@ -46,6 +46,7 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
 
   body {
     background: var(--bg);
@@ -61,7 +62,7 @@
   header { margin-bottom: 24px; }
   .header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   header h1 { font-size: 24px; font-weight: 650; letter-spacing: .5px; }
-  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .ghost-btn {
     height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px;
     background: var(--card); color: var(--text); font-size: 12px; cursor: pointer;
@@ -94,10 +95,11 @@
   .btn {
     height: 38px; padding: 0 18px; border: none; border-radius: 8px; cursor: pointer;
     font-size: 14px; font-weight: 600; background: var(--accent); color: #fff;
-    transition: background .15s, transform .05s; white-space: nowrap;
+    transition: filter .15s, transform .05s; white-space: nowrap;
   }
-  .btn:hover { background: var(--accent); filter: brightness(.92); }
+  .btn:hover { filter: brightness(.92); }
   .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   /* 分组 */
   .group { margin-bottom: 22px; }
@@ -161,7 +163,6 @@
 
   /* 知识点面板 */
   .knowledge-panel { border-top: 1px dashed var(--border); padding: 12px 14px 14px; background: var(--panel-bg); }
-  .knowledge-panel[hidden] { display: none; }
   .kp-head { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
   .kp-list { list-style: none; margin-bottom: 12px; }
   .kp-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--divider); }
@@ -181,12 +182,26 @@
   .btn-sm:hover { filter: brightness(.92); }
   .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 60px 0; }
 
+  /* 登录页 */
+  .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 32px; width: 100%; max-width: 360px;
+  }
+  .auth-card h1 { font-size: 22px; font-weight: 650; margin-bottom: 4px; }
+  .auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .auth-card .field { margin-bottom: 14px; }
+  .auth-card .btn { width: 100%; height: 40px; margin-top: 4px; }
+  .auth-switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 16px; }
+  .auth-switch a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
+  .auth-msg { font-size: 13px; color: var(--danger); margin-top: 12px; min-height: 18px; text-align: center; }
+  .auth-msg.ok { color: #16a34a; }
+
   /* 编辑弹窗 */
   .modal-mask {
     position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center;
     z-index: 50; padding: 20px;
   }
-  .modal-mask[hidden] { display: none; }
   .modal {
     background: var(--card); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 380px;
     box-shadow: 0 12px 40px rgba(16, 24, 40, .2);
@@ -206,50 +221,79 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="header-top">
-      <h1>校招记录</h1>
-      <div class="header-actions">
-        <button class="ghost-btn" id="btn-export" title="导出为 JSON 文件">导出</button>
-        <button class="ghost-btn" id="btn-import" title="从 JSON 文件导入">导入</button>
-        <button class="icon-btn" id="btn-theme" title="切换深浅色模式">🌙</button>
+<div id="app-view" hidden>
+  <div class="wrap">
+    <header>
+      <div class="header-top">
+        <h1>校招记录</h1>
+        <div class="header-actions">
+          <button class="ghost-btn" id="btn-export" title="导出为 JSON 文件">导出</button>
+          <button class="ghost-btn" id="btn-import" title="从 JSON 文件导入">导入</button>
+          <button class="icon-btn" id="btn-theme" title="切换深浅色模式">🌙</button>
+          <button class="ghost-btn" id="btn-logout" title="退出登录">退出</button>
+        </div>
       </div>
-    </div>
-    <div class="sub">
-      <span class="stat">共 <b id="stat-total">0</b> 个岗位</span>
-      <span class="dot-sep">·</span>
-      <span class="stat">进行中 <b id="stat-active">0</b></span>
-      <span class="dot-sep">·</span>
-      <span class="stat">已划掉 <b id="stat-rejected">0</b></span>
-    </div>
-  </header>
+      <div class="sub">
+        <span class="stat">共 <b id="stat-total">0</b> 个岗位</span>
+        <span class="dot-sep">·</span>
+        <span class="stat">进行中 <b id="stat-active">0</b></span>
+        <span class="dot-sep">·</span>
+        <span class="stat">已划掉 <b id="stat-rejected">0</b></span>
+      </div>
+    </header>
 
-  <div class="form-card">
-    <form id="add-form" class="form-grid" autocomplete="off">
-      <div class="field">
-        <label for="f-company">公司名称</label>
-        <input id="f-company" placeholder="如：字节跳动" required>
-      </div>
-      <div class="field">
-        <label for="f-position">岗位名称</label>
-        <input id="f-position" placeholder="如：前端开发工程师" required>
-      </div>
-      <div class="field">
-        <label for="f-progress">当前进展</label>
-        <input id="f-progress" list="progress-options" placeholder="如：面试中" value="已投递">
-        <datalist id="progress-options"></datalist>
-      </div>
-      <div class="field">
-        <label for="f-date">日期</label>
-        <input id="f-date" type="date">
-      </div>
-      <button type="submit" class="btn">添加</button>
-    </form>
+    <div class="form-card">
+      <form id="add-form" class="form-grid" autocomplete="off">
+        <div class="field">
+          <label for="f-company">公司名称</label>
+          <input id="f-company" placeholder="如：字节跳动" required>
+        </div>
+        <div class="field">
+          <label for="f-position">岗位名称</label>
+          <input id="f-position" placeholder="如：前端开发工程师" required>
+        </div>
+        <div class="field">
+          <label for="f-progress">当前进展</label>
+          <input id="f-progress" list="progress-options" placeholder="如：面试中" value="已投递">
+          <datalist id="progress-options"></datalist>
+        </div>
+        <div class="field">
+          <label for="f-date">日期</label>
+          <input id="f-date" type="date">
+        </div>
+        <button type="submit" class="btn">添加</button>
+      </form>
+    </div>
+
+    <main id="list"></main>
+    <div class="empty" id="empty" hidden>还没有记录，先在上方添加第一个岗位吧。</div>
   </div>
+</div>
 
-  <main id="list"></main>
-  <div class="empty" id="empty" hidden>还没有记录，先在上方添加第一个岗位吧。</div>
+<!-- 登录页 -->
+<div id="auth-view" hidden>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>校招记录</h1>
+      <p class="auth-sub">登录后，手机与电脑数据自动同步</p>
+      <form id="auth-form" autocomplete="on">
+        <div class="field">
+          <label for="a-email">邮箱</label>
+          <input id="a-email" type="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label for="a-password">密码</label>
+          <input id="a-password" type="password" placeholder="至少 6 位" minlength="6" required>
+        </div>
+        <button type="submit" class="btn" id="a-submit">登录</button>
+      </form>
+      <div class="auth-switch">
+        <span id="a-mode-text">还没有账号？</span>
+        <a id="a-toggle">去注册</a>
+      </div>
+      <p class="auth-msg" id="a-msg"></p>
+    </div>
+  </div>
 </div>
 
 <!-- 导入文件 -->
@@ -278,9 +322,14 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
-  const STORAGE_KEY = 'campus_recruit_records_v1';
+  // ===== 在这里填入 Supabase 连接信息 =====
+  const SUPABASE_URL = "https://vjtqrukclxffusyglkbo.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_BebuzRABdtBdmighCQ88Tg_SnOfShX3";
+  // =======================================
+
   const THEME_KEY = 'campus_recruit_theme';
   const DEFAULT_PROGRESS = ['已投递', '简历筛选', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '已签约'];
   const PROGRESS_PRIORITY = {
@@ -293,28 +342,16 @@
     '已签约': 8
   };
 
-  let records = load();
-  let editingId = null;      // 正在编辑的岗位 id
-  let expandedId = null;     // 展开知识点面板的岗位 id
+  let supabase = null;
+  let records = [];
+  let currentUserId = null;
+  let authMode = 'login';
+  let editingId = null;
+  let expandedId = null;
 
   const $ = (sel) => document.querySelector(sel);
-  const listEl = $('#list');
-  const emptyEl = $('#empty');
 
-  // ---------- 数据 ----------
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) { return []; }
-  }
-  function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
-  }
-  function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
+  // ---------- 工具 ----------
   function todayStr() {
     const d = new Date();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -323,12 +360,24 @@
   }
   function fmtDate(s) {
     if (!s) return '';
-    const [y, m, d] = s.split('-');
+    const [y, m, d] = String(s).split('-');
     const cur = new Date().getFullYear();
     return (Number(y) === cur ? '' : y + '年') + Number(m) + '月' + Number(d) + '日';
   }
   function sig(r) {
     return [r.company || '', r.position || '', r.date || '', r.progress || ''].join('||');
+  }
+  function normalize(row) {
+    return {
+      id: row.id,
+      date: row.date || '',
+      company: row.company || '',
+      position: row.position || '',
+      progress: row.progress || '已投递',
+      rejected: !!row.rejected,
+      knowledge: Array.isArray(row.knowledge) ? row.knowledge : [],
+      knowledgeDone: Array.isArray(row.knowledge_done) ? row.knowledge_done : []
+    };
   }
 
   // ---------- 深浅色 ----------
@@ -341,13 +390,68 @@
   }
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    $('#btn-theme').textContent = t === 'dark' ? '☀️' : '🌙';
+    const btn = $('#btn-theme');
+    if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+  }
+
+  // ---------- 认证 ----------
+  function showAuth() {
+    currentUserId = null;
+    records = [];
+    $('#app-view').hidden = true;
+    $('#auth-view').hidden = false;
+  }
+  async function enterApp() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { showAuth(); return; }
+    currentUserId = session.user.id;
+    $('#auth-view').hidden = true;
+    $('#app-view').hidden = false;
+    await loadRecords();
+  }
+  function setAuthMsg(text, ok) {
+    const el = $('#a-msg');
+    el.textContent = text;
+    el.className = 'auth-msg' + (ok ? ' ok' : '');
+  }
+
+  // ---------- 数据读写 ----------
+  async function loadRecords() {
+    const { data, error } = await supabase.from('records').select('*').order('created_at', { ascending: true });
+    if (error) { alert('加载失败：' + error.message); return; }
+    records = (data || []).map(normalize);
+    render();
+  }
+  async function insertRecord(payload) {
+    const { data, error } = await supabase.from('records').insert(payload).select().single();
+    if (error) { alert('添加失败：' + error.message); return null; }
+    return normalize(data);
+  }
+  async function updateRecord(id, patch) {
+    const { error } = await supabase.from('records').update(patch).eq('id', id);
+    if (error) { alert('保存失败：' + error.message); return false; }
+    const rec = records.find(x => x.id === id);
+    if (rec) Object.assign(rec, patch);
+    render();
+    return true;
+  }
+  async function deleteRecord(id) {
+    const { error } = await supabase.from('records').delete().eq('id', id);
+    if (error) { alert('删除失败：' + error.message); return false; }
+    records = records.filter(x => x.id !== id);
+    render();
+    return true;
   }
 
   // ---------- 导出 / 导入 ----------
   function exportJSON() {
-    const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+    const data = records.map(r => ({
+      date: r.date, company: r.company, position: r.position,
+      progress: r.progress, rejected: r.rejected,
+      knowledge: r.knowledge, knowledgeDone: r.knowledgeDone
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -357,11 +461,12 @@
   }
   function importJSON(file) {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const arr = JSON.parse(reader.result);
         if (!Array.isArray(arr)) throw new Error('not array');
-        let added = 0, skipped = 0;
+        const rows = [];
+        let skipped = 0;
         const seen = new Set(records.map(sig));
         arr.forEach(item => {
           if (!item || typeof item !== 'object') return;
@@ -371,21 +476,22 @@
           const s = sig({ company, position, date: item.date, progress: item.progress });
           if (seen.has(s)) { skipped++; return; }
           seen.add(s);
-          records.push({
-            id: uid(),
+          rows.push({
+            user_id: currentUserId,
             date: item.date || todayStr(),
             company,
             position,
             progress: item.progress || '已投递',
             rejected: !!item.rejected,
-            knowledge: Array.isArray(item.knowledge) ? item.knowledge.map(String) : [],
-            knowledgeDone: Array.isArray(item.knowledgeDone) ? item.knowledgeDone : undefined
+            knowledge: Array.isArray(item.knowledge) ? item.knowledge : [],
+            knowledge_done: Array.isArray(item.knowledgeDone) ? item.knowledgeDone : []
           });
-          added++;
         });
-        save();
-        render();
-        alert('导入完成：新增 ' + added + ' 条' + (skipped ? '，跳过重复 ' + skipped + ' 条' : '') + '。');
+        if (rows.length === 0) { alert('没有可导入的新数据（可能都已存在）。'); return; }
+        const { error } = await supabase.from('records').insert(rows);
+        if (error) { alert('导入失败：' + error.message); return; }
+        await loadRecords();
+        alert('导入完成：新增 ' + rows.length + ' 条' + (skipped ? '，跳过重复 ' + skipped + ' 条' : '') + '。');
       } catch (e) {
         alert('导入失败：文件格式不正确。');
       }
@@ -422,6 +528,8 @@
     updateDatalist(allProgress);
     updateStats();
 
+    const listEl = $('#list');
+    const emptyEl = $('#empty');
     if (records.length === 0) {
       listEl.innerHTML = '';
       emptyEl.hidden = false;
@@ -462,11 +570,7 @@
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = !!r.rejected;
-    cb.addEventListener('change', () => {
-      r.rejected = cb.checked;
-      save();
-      render();
-    });
+    cb.addEventListener('change', async () => { await updateRecord(r.id, { rejected: cb.checked }); });
     rejectLabel.appendChild(cb);
     rejectLabel.appendChild(document.createTextNode('落选'));
 
@@ -501,11 +605,7 @@
       sel.appendChild(opt);
     });
     sel.value = r.progress || '未设置';
-    sel.addEventListener('change', () => {
-      r.progress = sel.value;
-      save();
-      render();
-    });
+    sel.addEventListener('change', async () => { await updateRecord(r.id, { progress: sel.value }); });
 
     const editBtn = document.createElement('button');
     editBtn.className = 'icon-btn';
@@ -517,11 +617,9 @@
     delBtn.className = 'icon-btn del';
     delBtn.title = '删除';
     delBtn.textContent = '×';
-    delBtn.addEventListener('click', () => {
+    delBtn.addEventListener('click', async () => {
       if (confirm('确定删除「' + r.company + ' · ' + r.position + '」吗？')) {
-        records = records.filter(x => x.id !== r.id);
-        save();
-        render();
+        await deleteRecord(r.id);
       }
     });
 
@@ -567,11 +665,10 @@
         const c = document.createElement('input');
         c.type = 'checkbox';
         c.checked = !!(r.knowledgeDone && r.knowledgeDone[i]);
-        c.addEventListener('change', () => {
+        c.addEventListener('change', async () => {
           r.knowledgeDone = r.knowledgeDone || [];
           r.knowledgeDone[i] = c.checked;
-          save();
-          render();
+          await updateRecord(r.id, { knowledge_done: r.knowledgeDone || [] });
         });
         const span = document.createElement('span');
         span.className = 'kp-text';
@@ -580,11 +677,10 @@
         del.className = 'kp-del';
         del.title = '删除';
         del.textContent = '×';
-        del.addEventListener('click', () => {
+        del.addEventListener('click', async () => {
           kp.splice(i, 1);
           if (r.knowledgeDone) r.knowledgeDone.splice(i, 1);
-          save();
-          render();
+          await updateRecord(r.id, { knowledge: kp, knowledge_done: r.knowledgeDone || [] });
         });
         li.appendChild(c);
         li.appendChild(span);
@@ -601,13 +697,12 @@
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-sm';
     addBtn.textContent = '添加';
-    const doAdd = () => {
+    const doAdd = async () => {
       const v = input.value.trim();
       if (!v) return;
       kp.push(v);
       if (r.knowledgeDone) r.knowledgeDone.push(false);
-      save();
-      render();
+      await updateRecord(r.id, { knowledge: kp, knowledge_done: r.knowledgeDone || [] });
     };
     addBtn.addEventListener('click', doAdd);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
@@ -641,15 +736,19 @@
 
   // ---------- 添加 ----------
   const addForm = $('#add-form');
-  addForm.addEventListener('submit', (e) => {
+  addForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const company = $('#f-company').value.trim();
     const position = $('#f-position').value.trim();
     const progress = $('#f-progress').value.trim() || '已投递';
     const date = $('#f-date').value || todayStr();
     if (!company || !position) return;
-    records.push({ id: uid(), date, company, position, progress, rejected: false, knowledge: [] });
-    save();
+    const rec = await insertRecord({
+      user_id: currentUserId, date, company, position, progress,
+      rejected: false, knowledge: [], knowledge_done: []
+    });
+    if (!rec) return;
+    records.push(rec);
     $('#f-company').value = '';
     $('#f-position').value = '';
     $('#f-progress').value = progress;
@@ -668,14 +767,14 @@
     $('#e-company').focus();
   }
   $('#modal-cancel').addEventListener('click', () => { modal.hidden = true; editingId = null; });
-  $('#modal-save').addEventListener('click', () => {
+  $('#modal-save').addEventListener('click', async () => {
     const r = records.find(x => x.id === editingId);
     if (r) {
-      r.company = $('#e-company').value.trim() || r.company;
-      r.position = $('#e-position').value.trim() || r.position;
-      r.date = $('#e-date').value || r.date;
-      save();
-      render();
+      await updateRecord(r.id, {
+        company: $('#e-company').value.trim() || r.company,
+        position: $('#e-position').value.trim() || r.position,
+        date: $('#e-date').value || r.date
+      });
     }
     modal.hidden = true;
     editingId = null;
@@ -695,11 +794,64 @@
   $('#btn-theme').addEventListener('click', () => {
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
   });
+  $('#btn-logout').addEventListener('click', async () => { await supabase.auth.signOut(); });
+
+  // 登录 / 注册
+  const authForm = $('#auth-form');
+  $('#a-toggle').addEventListener('click', () => {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    $('#a-submit').textContent = authMode === 'login' ? '登录' : '注册';
+    $('#a-mode-text').textContent = authMode === 'login' ? '还没有账号？' : '已有账号？';
+    $('#a-toggle').textContent = authMode === 'login' ? '去注册' : '去登录';
+  });
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('#a-email').value.trim();
+    const password = $('#a-password').value;
+    if (!email || !password) { setAuthMsg('请输入邮箱和密码'); return; }
+    $('#a-submit').disabled = true;
+    setAuthMsg('');
+    const res = authMode === 'login'
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
+    $('#a-submit').disabled = false;
+    if (res.error) {
+      setAuthMsg((authMode === 'login' ? '登录失败：' : '注册失败：') + res.error.message);
+      return;
+    }
+    if (authMode === 'signup' && !res.data.session) {
+      setAuthMsg('注册成功，请到邮箱点击确认链接后登录。', true);
+    }
+    // 其余情况由 onAuthStateChange 触发进入应用
+  });
 
   // ---------- 初始化 ----------
-  $('#f-date').value = todayStr();
   applyTheme(currentTheme());
-  render();
+  $('#f-date').value = todayStr();
+
+  const configured = SUPABASE_URL && SUPABASE_URL.indexOf('YOUR_') === -1 &&
+                     SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('YOUR_') === -1;
+  if (!configured) {
+    $('#auth-view').hidden = false;
+    $('#auth-form').hidden = true;
+    document.querySelector('.auth-switch').hidden = true;
+    setAuthMsg('尚未配置云端连接，请先完成 Supabase 设置（见 SETUP.md）。');
+    return;
+  }
+
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session) { enterApp(); }
+    else { showAuth(); }
+  });
+
+  // 页面加载时判断是否已登录
+  (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { await enterApp(); }
+    else { showAuth(); }
+  })();
 })();
 </script>
 </body>
