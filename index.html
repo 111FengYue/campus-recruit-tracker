@@ -226,6 +226,9 @@
   .auth-msg.ok { color: var(--ok); }
   .auth-links { text-align: right; margin-top: 10px; }
   .auth-links a { color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: none; }
+  .auth-install { text-align: center; margin-top: 14px; }
+  .auth-install a { color: var(--muted); font-size: 13px; cursor: pointer; text-decoration: none; }
+  .auth-install a:hover { color: var(--accent); }
 
   /* 编辑弹窗 */
   .modal-mask {
@@ -257,9 +260,8 @@
       <div class="header-top">
         <h1>校招记录</h1>
         <div class="header-actions">
-          <button class="ghost-btn" id="btn-export" title="导出为 JSON 文件">导出</button>
-          <button class="ghost-btn" id="btn-import" title="从 JSON 文件导入">导入</button>
           <button class="ghost-btn" id="btn-refresh" title="手动刷新同步">刷新</button>
+          <button class="ghost-btn js-install" title="安装到主屏幕">安装</button>
           <button class="icon-btn" id="btn-theme" title="切换深浅色模式">🌙</button>
           <button class="ghost-btn" id="btn-logout" title="退出登录">退出</button>
         </div>
@@ -350,13 +352,11 @@
         <span id="a-mode-text">还没有账号？</span>
         <a id="a-toggle">去注册</a>
       </div>
+      <div class="auth-install"><a class="js-install">📲 安装到主屏幕</a></div>
       <p class="auth-msg" id="a-msg"></p>
     </div>
   </div>
 </div>
-
-<!-- 导入文件 -->
-<input type="file" id="file-import" accept="application/json,.json" hidden>
 
 <!-- 编辑弹窗 -->
 <div class="modal-mask" id="modal" hidden>
@@ -444,9 +444,6 @@
     const [y, m, d] = String(s).split('-');
     const cur = new Date().getFullYear();
     return (Number(y) === cur ? '' : y + '年') + Number(m) + '月' + Number(d) + '日';
-  }
-  function sig(r) {
-    return [r.company || '', r.position || '', r.date || '', r.progress || ''].join('||');
   }
   function normalize(row) {
     return {
@@ -546,61 +543,6 @@
     setSync('ok');
     render();
     return true;
-  }
-
-  // ---------- 导出 / 导入 ----------
-  function exportJSON() {
-    const data = records.map(r => ({
-      date: r.date, company: r.company, position: r.position,
-      progress: r.progress, rejected: r.rejected,
-      knowledge: r.knowledge, knowledgeDone: r.knowledgeDone
-    }));
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '校招记录-' + todayStr() + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  function importJSON(file) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const arr = JSON.parse(reader.result);
-        if (!Array.isArray(arr)) throw new Error('not array');
-        const rows = [];
-        let skipped = 0;
-        const seen = new Set(records.map(sig));
-        arr.forEach(item => {
-          if (!item || typeof item !== 'object') return;
-          const company = (item.company || '').toString().trim();
-          const position = (item.position || '').toString().trim();
-          if (!company && !position) return;
-          const s = sig({ company, position, date: item.date, progress: item.progress });
-          if (seen.has(s)) { skipped++; return; }
-          seen.add(s);
-          rows.push({
-            user_id: currentUserId,
-            date: item.date || todayStr(),
-            company,
-            position,
-            progress: item.progress || '已投递',
-            rejected: !!item.rejected,
-            knowledge: Array.isArray(item.knowledge) ? item.knowledge : [],
-            knowledge_done: Array.isArray(item.knowledgeDone) ? item.knowledgeDone : []
-          });
-        });
-        if (rows.length === 0) { alert('没有可导入的新数据（可能都已存在）。'); return; }
-        const { error } = await supabase.from('records').insert(rows);
-        if (error) { alert('导入失败：' + error.message); return; }
-        await loadRecords();
-        alert('导入完成：新增 ' + rows.length + ' 条' + (skipped ? '，跳过重复 ' + skipped + ' 条' : '') + '。');
-      } catch (e) {
-        alert('导入失败：文件格式不正确。');
-      }
-    };
-    reader.readAsText(file);
   }
 
   // ---------- 分组 ----------
@@ -902,14 +844,7 @@
   });
 
   // ---------- 事件绑定 ----------
-  $('#btn-export').addEventListener('click', exportJSON);
-  $('#btn-import').addEventListener('click', () => $('#file-import').click());
   $('#btn-refresh').addEventListener('click', () => loadRecords());
-  $('#file-import').addEventListener('change', () => {
-    const file = $('#file-import').files[0];
-    if (file) importJSON(file);
-    $('#file-import').value = '';
-  });
   $('#btn-theme').addEventListener('click', () => {
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
   });
@@ -979,6 +914,34 @@
   $('#f-date').value = todayStr();
   showCheer();
   $('#cheer').addEventListener('click', showCheer);
+
+  // ---------- PWA 安装 ----------
+  let deferredPrompt = null;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  function updateInstallBtn() {
+    document.querySelectorAll('.js-install').forEach(btn => {
+      btn.hidden = isStandalone || !isMobile;
+    });
+  }
+  function installApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => { deferredPrompt = null; updateInstallBtn(); });
+      return;
+    }
+    if (isIOS) {
+      alert('请点击浏览器底部的「分享」按钮，再选择「添加到主屏幕」。');
+    } else {
+      alert('请在浏览器右上角菜单中选择「安装应用」或「添加到主屏幕」。');
+    }
+  }
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; updateInstallBtn(); });
+  document.querySelectorAll('.js-install').forEach(btn => btn.addEventListener('click', installApp));
+  updateInstallBtn();
 
   const configured = SUPABASE_URL && SUPABASE_URL.indexOf('YOUR_') === -1 &&
                      SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('YOUR_') === -1;
