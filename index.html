@@ -126,6 +126,7 @@
     font-size: 12px; color: var(--muted); background: var(--badge-bg); border-radius: 20px;
     padding: 2px 10px; font-weight: 500;
   }
+  .group.rejected-group .group-title { color: var(--danger); }
 
   /* 卡片 */
   .card {
@@ -571,19 +572,33 @@
     return name in PROGRESS_PRIORITY ? PROGRESS_PRIORITY[name] : 999;
   }
   function groupedRecords() {
+    const active = [];
+    const rejected = [];
+    records.forEach(r => (r.rejected ? rejected : active).push(r));
+
     const map = new Map();
-    records.forEach(r => {
+    active.forEach(r => {
       const key = r.progress || '未设置';
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(r);
     });
-    const groups = [...map.entries()].map(([name, items]) => ({ name, items }));
+    const groups = [...map.entries()].map(([name, items]) => ({ name, items, rejected: false }));
     groups.sort((a, b) => {
       const pa = groupPriority(a.name), pb = groupPriority(b.name);
       if (pa !== pb) return pa - pb;
       return a.name.localeCompare(b.name, 'zh');
     });
-    groups.forEach(g => g.items.sort((a, b) => (a.rejected ? 1 : 0) - (b.rejected ? 1 : 0)));
+
+    if (rejected.length > 0) {
+      rejected.sort((a, b) => {
+        const pa = groupPriority(a.progress || '未设置');
+        const pb = groupPriority(b.progress || '未设置');
+        if (pa !== pb) return pa - pb;
+        return (a.progress || '').localeCompare(b.progress || '', 'zh');
+      });
+      groups.push({ name: '落选', items: rejected, rejected: true });
+    }
+
     return groups;
   }
 
@@ -607,7 +622,7 @@
     listEl.innerHTML = '';
     groups.forEach(g => {
       const section = document.createElement('section');
-      section.className = 'group';
+      section.className = 'group' + (g.rejected ? ' rejected-group' : '');
 
       const head = document.createElement('div');
       head.className = 'group-head';
