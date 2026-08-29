@@ -196,6 +196,17 @@
   .btn-sm { height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
   .btn-sm:hover { filter: brightness(.92); }
   .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 60px 0; }
+  .cheer {
+    text-align: center;
+    margin-top: 36px;
+    padding: 16px 12px;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s;
+  }
+  .cheer:hover { color: var(--accent); }
 
   /* 登录页 */
   .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -286,6 +297,7 @@
 
     <main id="list"></main>
     <div class="empty" id="empty" hidden>还没有记录，先在上方添加第一个岗位吧。</div>
+    <div class="cheer" id="cheer" title="点一下换一句"></div>
   </div>
 </div>
 
@@ -395,6 +407,28 @@
   let expandedId = null;
 
   const $ = (sel) => document.querySelector(sel);
+
+  const CHEERS = [
+    '每一次投递，都是离梦想更近一步，加油！',
+    '别怕被拒，属于你的 offer 正在赶来的路上 ✨',
+    '稳住心态，你的努力终会开花结果 💪',
+    '今天的坚持，是明天的底气 🌱',
+    '面了这家还有下一家，机会留给有准备的人',
+    '你已经比昨天更接近目标了，继续冲！',
+    '每一次面试都是免费的经验包，攒着攒着就变强了 🎒',
+    '相信自己的实力，offer 会有的，面包也会有的 🍞',
+    '求职季虽累，但每一步都算数 📈',
+    '别焦虑，慢慢来，属于你的岗位正在等你 🌈'
+  ];
+  let lastCheer = -1;
+  function showCheer() {
+    const el = $('#cheer');
+    if (!el) return;
+    let i;
+    do { i = Math.floor(Math.random() * CHEERS.length); } while (i === lastCheer && CHEERS.length > 1);
+    lastCheer = i;
+    el.textContent = CHEERS[i];
+  }
 
   // ---------- 工具 ----------
   function todayStr() {
@@ -941,6 +975,8 @@
   // ---------- 初始化 ----------
   applyTheme(currentTheme());
   $('#f-date').value = todayStr();
+  showCheer();
+  $('#cheer').addEventListener('click', showCheer);
 
   const configured = SUPABASE_URL && SUPABASE_URL.indexOf('YOUR_') === -1 &&
                      SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('YOUR_') === -1;
