@@ -20,6 +20,7 @@
     --divider: #f0f1f3;
     --badge-bg: #eef0f3;
     --faint: #b3b9c2;
+    --ok: #16a34a;
     --mask: rgba(15, 23, 42, .4);
     --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
     --radius: 12px;
@@ -40,6 +41,7 @@
     --divider: #252b33;
     --badge-bg: #262d36;
     --faint: #6b7380;
+    --ok: #34d399;
     --mask: rgba(0, 0, 0, .65);
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 1px 3px rgba(0, 0, 0, .4);
     color-scheme: dark;
@@ -76,6 +78,10 @@
   .stat { font-size: 12px; color: var(--muted); }
   .stat b { color: var(--text); font-weight: 600; }
   .dot-sep { color: var(--muted); }
+  .sync-status { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .sync-status.ok { color: var(--ok); }
+  .sync-status.syncing { color: var(--accent); }
+  .sync-status.error { color: var(--danger); }
 
   /* 表单 */
   .form-card {
@@ -195,7 +201,9 @@
   .auth-switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 16px; }
   .auth-switch a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
   .auth-msg { font-size: 13px; color: var(--danger); margin-top: 12px; min-height: 18px; text-align: center; }
-  .auth-msg.ok { color: #16a34a; }
+  .auth-msg.ok { color: var(--ok); }
+  .auth-links { text-align: right; margin-top: 10px; }
+  .auth-links a { color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: none; }
 
   /* 编辑弹窗 */
   .modal-mask {
@@ -229,6 +237,7 @@
         <div class="header-actions">
           <button class="ghost-btn" id="btn-export" title="导出为 JSON 文件">导出</button>
           <button class="ghost-btn" id="btn-import" title="从 JSON 文件导入">导入</button>
+          <button class="ghost-btn" id="btn-refresh" title="手动刷新同步">刷新</button>
           <button class="icon-btn" id="btn-theme" title="切换深浅色模式">🌙</button>
           <button class="ghost-btn" id="btn-logout" title="退出登录">退出</button>
         </div>
@@ -239,6 +248,7 @@
         <span class="stat">进行中 <b id="stat-active">0</b></span>
         <span class="dot-sep">·</span>
         <span class="stat">已划掉 <b id="stat-rejected">0</b></span>
+        <span class="sync-status" id="sync-status">已同步</span>
       </div>
     </header>
 
@@ -276,6 +286,7 @@
     <div class="auth-card">
       <h1>校招记录</h1>
       <p class="auth-sub">登录后，手机与电脑数据自动同步</p>
+
       <form id="auth-form" autocomplete="on">
         <div class="field">
           <label for="a-email">邮箱</label>
@@ -286,8 +297,33 @@
           <input id="a-password" type="password" placeholder="至少 6 位" minlength="6" required>
         </div>
         <button type="submit" class="btn" id="a-submit">登录</button>
+        <div class="auth-links"><a id="a-forgot">忘记密码？</a></div>
       </form>
-      <div class="auth-switch">
+
+      <form id="forgot-form" autocomplete="off" hidden>
+        <p class="auth-sub">输入注册邮箱，我们会发送重置链接</p>
+        <div class="field">
+          <label for="f-email">邮箱</label>
+          <input id="f-email" type="email" placeholder="you@example.com" required>
+        </div>
+        <button type="submit" class="btn">发送重置邮件</button>
+        <div class="auth-links"><a id="forgot-back">返回登录</a></div>
+      </form>
+
+      <form id="reset-form" autocomplete="off" hidden>
+        <p class="auth-sub">设置新密码</p>
+        <div class="field">
+          <label for="r-password">新密码</label>
+          <input id="r-password" type="password" placeholder="至少 6 位" minlength="6" required>
+        </div>
+        <div class="field">
+          <label for="r-password2">确认新密码</label>
+          <input id="r-password2" type="password" placeholder="再输入一次" minlength="6" required>
+        </div>
+        <button type="submit" class="btn">重置密码</button>
+      </form>
+
+      <div class="auth-switch" id="auth-switch">
         <span id="a-mode-text">还没有账号？</span>
         <a id="a-toggle">去注册</a>
       </div>
@@ -380,6 +416,14 @@
     };
   }
 
+  function setSync(state) {
+    const el = $('#sync-status');
+    if (!el) return;
+    if (state === 'syncing') { el.textContent = '同步中…'; el.className = 'sync-status syncing'; }
+    else if (state === 'error') { el.textContent = '同步失败'; el.className = 'sync-status error'; }
+    else { el.textContent = '已同步'; el.className = 'sync-status ok'; }
+  }
+
   // ---------- 深浅色 ----------
   function currentTheme() {
     try {
@@ -396,11 +440,18 @@
   }
 
   // ---------- 认证 ----------
+  function showAuthPanel(panel) {
+    $('#auth-form').hidden = panel !== 'auth';
+    $('#forgot-form').hidden = panel !== 'forgot';
+    $('#reset-form').hidden = panel !== 'reset';
+    $('#auth-switch').hidden = panel !== 'auth';
+  }
   function showAuth() {
     currentUserId = null;
     records = [];
     $('#app-view').hidden = true;
     $('#auth-view').hidden = false;
+    showAuthPanel('auth');
   }
   async function enterApp() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -418,28 +469,36 @@
 
   // ---------- 数据读写 ----------
   async function loadRecords() {
+    setSync('syncing');
     const { data, error } = await supabase.from('records').select('*').order('created_at', { ascending: true });
-    if (error) { alert('加载失败：' + error.message); return; }
+    if (error) { setSync('error'); alert('加载失败：' + error.message); return; }
     records = (data || []).map(normalize);
+    setSync('ok');
     render();
   }
   async function insertRecord(payload) {
+    setSync('syncing');
     const { data, error } = await supabase.from('records').insert(payload).select().single();
-    if (error) { alert('添加失败：' + error.message); return null; }
+    if (error) { setSync('error'); alert('添加失败：' + error.message); return null; }
+    setSync('ok');
     return normalize(data);
   }
   async function updateRecord(id, patch) {
+    setSync('syncing');
     const { error } = await supabase.from('records').update(patch).eq('id', id);
-    if (error) { alert('保存失败：' + error.message); return false; }
+    if (error) { setSync('error'); alert('保存失败：' + error.message); return false; }
     const rec = records.find(x => x.id === id);
     if (rec) Object.assign(rec, patch);
+    setSync('ok');
     render();
     return true;
   }
   async function deleteRecord(id) {
+    setSync('syncing');
     const { error } = await supabase.from('records').delete().eq('id', id);
-    if (error) { alert('删除失败：' + error.message); return false; }
+    if (error) { setSync('error'); alert('删除失败：' + error.message); return false; }
     records = records.filter(x => x.id !== id);
+    setSync('ok');
     render();
     return true;
   }
@@ -786,6 +845,7 @@
   // ---------- 事件绑定 ----------
   $('#btn-export').addEventListener('click', exportJSON);
   $('#btn-import').addEventListener('click', () => $('#file-import').click());
+  $('#btn-refresh').addEventListener('click', () => loadRecords());
   $('#file-import').addEventListener('change', () => {
     const file = $('#file-import').files[0];
     if (file) importJSON(file);
@@ -825,6 +885,36 @@
     // 其余情况由 onAuthStateChange 触发进入应用
   });
 
+  // 忘记密码
+  $('#a-forgot').addEventListener('click', () => { setAuthMsg(''); showAuthPanel('forgot'); });
+  $('#forgot-back').addEventListener('click', () => { setAuthMsg(''); showAuthPanel('auth'); });
+  $('#forgot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('#f-email').value.trim();
+    if (!email) { setAuthMsg('请输入邮箱'); return; }
+    const btn = e.target.querySelector('.btn');
+    btn.disabled = true;
+    setAuthMsg('');
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    btn.disabled = false;
+    if (error) { setAuthMsg('发送失败：' + error.message); }
+    else { setAuthMsg('重置邮件已发送，请查收邮箱。', true); }
+  });
+  $('#reset-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const p1 = $('#r-password').value;
+    const p2 = $('#r-password2').value;
+    if (p1.length < 6) { setAuthMsg('密码至少 6 位'); return; }
+    if (p1 !== p2) { setAuthMsg('两次输入的密码不一致'); return; }
+    const { error } = await supabase.auth.updateUser({ password: p1 });
+    if (error) { setAuthMsg('重置失败：' + error.message); }
+    else {
+      setAuthMsg('密码已重置，请重新登录。', true);
+      showAuthPanel('auth');
+    }
+  });
+
   // ---------- 初始化 ----------
   applyTheme(currentTheme());
   $('#f-date').value = todayStr();
@@ -842,8 +932,16 @@
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   supabase.auth.onAuthStateChange((event, session) => {
-    if (session) { enterApp(); }
-    else { showAuth(); }
+    if (event === 'PASSWORD_RECOVERY') {
+      $('#auth-view').hidden = false;
+      $('#app-view').hidden = true;
+      setAuthMsg('');
+      showAuthPanel('reset');
+    } else if (session) {
+      enterApp();
+    } else {
+      showAuth();
+    }
   });
 
   // 页面加载时判断是否已登录

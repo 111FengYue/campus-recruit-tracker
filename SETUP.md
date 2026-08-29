@@ -46,4 +46,11 @@
 - **手机 / 电脑同步**：在另一个设备打开网址 → 用**同一个邮箱密码**登录即可看到同一份数据
 - **多人使用**：每个人用自己的邮箱注册，各看各的数据，互不干扰
 
-> 关于 Site URL（可选）：如果以后要用「找回密码」功能，在 Supabase → Authentication → URL Configuration 里把 Site URL 改成你的 Pages 网址即可。日常登录不受影响。
+## 找回密码配置（「忘记密码」功能需要）
+
+1. 打开 Supabase → **Authentication → URL Configuration**
+2. 把 **Site URL** 改成 `https://111fengyue.github.io/campus-recruit-tracker/`
+3. 若有 **Redirect URLs** 列表，把同一网址也加进去
+4. 保存
+
+这样「忘记密码」发送的重置链接才能正确跳转回网站。
